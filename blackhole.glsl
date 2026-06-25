@@ -33,33 +33,33 @@
 
 // ---------------------------------------------------------------- tunables --
 // hole & lensing
-const float HOLE_RADIUS   = 0.0200; // size dial. Pomodoro: shadow radius at full size (fraction of screen height). Token mode: scales the area calibration, exact at 0.08.
-const float LENS_DEPTH    = 13.0000; // distance from hole to the terminal "sky" plane, in r_s — bigger = text bends harder
+const float HOLE_RADIUS   = 0.0800; // size dial. Pomodoro: shadow radius at full size (fraction of screen height). Token mode: scales the area calibration, exact at 0.08.
+const float LENS_DEPTH    = 4.0000; // distance from hole to the terminal "sky" plane, in r_s — bigger = text bends harder
 const float STAR_GAIN     = 0.0000; // lensed starfield brightness around the hole (0 = off)
 // accretion disk geometry (radii in Schwarzschild radii)
-const float DISK_INNER    = 1.8000; // inner edge; 3 r_s is the ISCO — the innermost stable orbit
-const float DISK_OUTER    = 8.0000; // outer edge
-const float DISK_INCL     = 1.5000; // inclination, rad: 0 = face-on, 1.57 = edge-on
-const float DISK_ROLL     = 0.3500; // rotation of the whole system in the screen plane, rad
+const float DISK_INNER    = 3.0000; // inner edge; 3 r_s is the ISCO — the innermost stable orbit
+const float DISK_OUTER    = 9.0000; // outer edge
+const float DISK_INCL     = 1.4500; // inclination, rad: 0 = face-on, 1.57 = edge-on
+const float DISK_ROLL     = 0.1500; // rotation of the whole system in the screen plane, rad
 // accretion disk matter & light
-const float DISK_GAIN     = 2.2000; // disk emission brightness
-const float DISK_OPACITY  = 0.9000; // how much the near disk hides what is behind it (0..1)
-const float DISK_TEMP     = 5500.0000; // temperature of the hottest annulus, Kelvin (blackbody color)
-const float DOPPLER_MIX   = 0.6000; // 0 = no relativistic color/brightness asymmetry, 1 = full effect
-const float DISK_BEAM     = 2.5000; // beaming exponent: observed intensity scales as g^N
-const float DISK_SPEED    = 5.0000; // streak pattern speed; negative reverses the orbit direction
-const float DISK_WIND     = 7.0000; // spiral winding tightness of the streaks
-const float DISK_CONTRAST = 1.6000; // streak contrast: 0 = smooth haze, higher = sharp filaments
+const float DISK_GAIN     = 1.0000; // disk emission brightness
+const float DISK_OPACITY  = 0.6500; // how much the near disk hides what is behind it (0..1)
+const float DISK_TEMP     = 8500.0000; // temperature of the hottest annulus, Kelvin (blackbody color)
+const float DOPPLER_MIX   = 1.0000; // 0 = no relativistic color/brightness asymmetry, 1 = full effect
+const float DISK_BEAM     = 3.0000; // beaming exponent: observed intensity scales as g^N
+const float DISK_SPEED    = 3.6000; // streak pattern speed; negative reverses the orbit direction
+const float DISK_WIND     = 5.0000; // spiral winding tightness of the streaks
+const float DISK_CONTRAST = 0.9000; // streak contrast: 0 = smooth haze, higher = sharp filaments
 // light & screen
-const float EXPOSURE      = 1.4000; // tonemap exposure for the disk light (terminal text is untouched)
+const float EXPOSURE      = 1.0000; // tonemap exposure for the disk light (terminal text is untouched)
 const float DRIFT_SPEED   = 1.0000; // how fast the hole floats around
 const float WORK_AREA     = 0.3300; // bottom screen fraction kept undistorted
 const float DILATION_MIN  = 0.2000; // disk pattern time rate at full size (gravitational time dilation theme)
 // token mode
 const float TOKEN_AREA_MIN = 0.0100; // MODE_TOKENS: shadow area at 0% context, as a fraction of the terminal area
 const float TOKEN_AREA_MAX = 0.5000; // MODE_TOKENS: shadow area at 100% context. Looks bigger than it sounds: the bright disk reaches ~3x past the shadow radius, so 0.0313 already fills most of a screen height — and render cost scales with it.
-const float TOKEN_HOME_X  = 0.9600; // MODE_TOKENS: corner-home x in uv (1.0 = right edge)
-const float TOKEN_HOME_Y  = 0.0400; // MODE_TOKENS: corner-home y in uv (0.0 = screen top — Ghostty y runs top-down)
+const float TOKEN_HOME_X  = 0.9400; // MODE_TOKENS: corner-home x in uv (1.0 = right edge)
+const float TOKEN_HOME_Y  = 0.0600; // MODE_TOKENS: corner-home y in uv (0.0 = screen top — Ghostty y runs top-down)
 const float TOKEN_EASE    = 1.0000; // MODE_TOKENS: growth curve exponent; 1 = proportional, <1 front-loads growth, >1 back-loads it
 const float TOKEN_REACH   = 1.0000; // MODE_TOKENS: fraction of the playable screen the roam box covers at 100% context
 const float TOKEN_CALM    = 0.0400; // MODE_TOKENS: drift speed at 0% context (near-still seed)
@@ -83,7 +83,7 @@ const float TOKEN_RUSH    = 1.1000; // MODE_TOKENS: drift speed at 100% context 
 #define MODE_POMODORO 0   // wall-clock 55/5 work/break cycle + typing detector
 #define MODE_TOKENS   1   // Claude Code context-window fill (live; see README)
 #define MODE_DEMO     2   // self-running 42 s showcase loop for recording (see below)
-#define SIZE_MODE MODE_TOKENS
+#define SIZE_MODE MODE_POMODORO
 
 // Live state for MODE_TOKENS rides in on the *cursor color*: claude-token.py
 // encodes the context fill into an OSC 12 cursor color and the shader decodes
@@ -219,7 +219,7 @@ DiskLook demoLook() {
 const float WORK_PERIOD_MIN = 55.0000; // work minutes per cycle (growth phase)
 const float BREAK_MIN       = 5.0000; // break minutes per cycle (hole gone)
 const float IDLE_FADE_SEC   = 90.0000; // typing pause at which fading starts
-const float TIME_SCALE      = 1.0000; // TESTING: 1 = real wall-clock schedule; >1 fast-forwards growth via iTime (100 -> a full cycle in ~36 s). Set back to 1 for normal use.
+const float TIME_SCALE      = 2.0000; // TESTING: 1 = real wall-clock schedule; >1 fast-forwards growth via iTime (100 -> a full cycle in ~36 s). Set back to 1 for normal use.
 
 // critical impact parameter of a Schwarzschild hole, in r_s: rays under this
 // fall in; it is the apparent (shadow) radius seen from far away. Physics,
@@ -336,8 +336,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // cycle start, back to small when the break window arrives
         I = mix(0.12, 1.0, grow);
         // typing detector: cursor quiet -> you're pausing; the hole shrinks live
-        // and is gone by the time the pause becomes a real break
+        // and is gone by the time the pause becomes a real break. When focus
+        // tracking is on, recent focus gain resets the idle timer — switching
+        // to a split is itself a sign of user activity, so the hole shouldn't
+        // fade just because you were working in another split.
         float idle = max(0.0, iTime - iTimeCursorChange);
+#if FOCUS_TRACKING
+        float focusAge = iTime - iTimeFocus;
+        if (focusAge < IDLE_FADE_SEC) idle = 0.0;
+#endif
         I *= 1.0 - smoothstep(IDLE_FADE_SEC, max(BREAK_MIN * 60.0, IDLE_FADE_SEC + 1.0), idle);
         sz = mix(0.22, 1.0, I);              // starts small, grows toward break time
         // lazy Lissajous drift, vertically confined so the hole and its disk
