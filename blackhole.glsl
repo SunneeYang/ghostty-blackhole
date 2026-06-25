@@ -336,9 +336,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // cycle start, back to small when the break window arrives
         I = mix(0.12, 1.0, grow);
         // typing detector: cursor quiet -> you're pausing; the hole shrinks live
-        // and is gone by the time the pause becomes a real break
+        // and is gone by the time the pause becomes a real break.
+        // When focus tracking is on, this is disabled — iTimeCursorChange
+        // tracks cursor *color/style* changes, not cursor position, so TUI
+        // apps like Claude Code that manage the cursor independently never
+        // trigger it. The focus gate already hides the hole when the Ghostty
+        // window loses focus entirely (user switched to another app).
+#if FOCUS_TRACKING
+        // (idle fade is disabled — focus tracking manages visibility)
+#else
         float idle = max(0.0, iTime - iTimeCursorChange);
         I *= 1.0 - smoothstep(IDLE_FADE_SEC, max(BREAK_MIN * 60.0, IDLE_FADE_SEC + 1.0), idle);
+#endif
         sz = mix(0.22, 1.0, I);              // starts small, grows toward break time
         // lazy Lissajous drift, vertically confined so the hole and its disk
         // stay above the work area at the bottom; bounds adapt to size (the
