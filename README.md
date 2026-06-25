@@ -184,6 +184,67 @@ This is global, so the hole reacts to *any* Claude Code session. A few notes:
   token mode is built for plain Ghostty sessions.
 - To opt out, set `SIZE_MODE MODE_POMODORO` and remove the entries above.
 
+### Pomodoro mode via `pomodoro-status.py`
+
+Instead of the built-in wall-clock pomodoro (which can't detect activity in
+TUI apps like Claude Code), you can drive the hole with a lightweight script
+that tracks real terminal activity through its trigger frequency:
+
+```
+Claude Code statusLine ─┐
+                         ├─→ pomodoro-status.py → OSC 12 → shader (MODE_TOKENS)
+Shell precmd ────────────┘
+```
+
+The hole **grows** at a constant rate (0 → 1 over 55 minutes of continuous
+activity) and **shrinks** at a constant rate (1 → 0 over 5 minutes of idle).
+Activity is defined as the script being called within the last 90 seconds —
+by Claude Code's statusLine, your shell's `precmd`, or any other trigger.
+When calls stop arriving for 90 seconds, the hole smoothly shrinks away.
+
+Since `pomodoro-status.py` uses the same OSC 12 cursor-color channel as
+`claude-token.py`, you can use either one — switching is just a config change.
+
+Wire it up (both optional, use either or both):
+
+#### Claude Code
+
+Replace `claude-token.py` with `pomodoro-status.py` in your settings:
+
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "/path/to/pomodoro-status.py"
+  },
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "/path/to/pomodoro-status.py" }] }],
+    "SessionEnd":   [{ "hooks": [{ "type": "command", "command": "/path/to/pomodoro-status.py" }] }]
+  }
+}
+```
+
+#### Shell precmd
+
+Add to your `.zshrc` (or equivalent):
+
+```zsh
+precmd() { /path/to/pomodoro-status.py; }
+```
+
+Every prompt fires the script → marks activity → grows the hole. Walk away
+for 90 seconds → calls stop → hole shrinks.
+
+#### How it works
+
+State is kept in `~/.local/state/ghostty-pomodoro.json`. Each call:
+1. Reads the last level from the state file
+2. Computes wall-clock time since the last call (`dt`)
+3. If the gap since the previous call is &lt; 90s → **grow**: `level += dt / (55 × 60)`
+4. If the gap is &ge; 90s → **shrink**: `level -= dt / (5 × 60)`
+5. Writes the new level to the cursor color (OSC 12) → the shader renders it
+6. Saves state for the next call
+
 ## Install
 
 Requires Ghostty 1.3+ (for the cursor shader uniforms).
