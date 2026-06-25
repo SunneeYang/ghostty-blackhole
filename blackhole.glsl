@@ -65,6 +65,13 @@ const float TOKEN_REACH   = 1.0000; // MODE_TOKENS: fraction of the playable scr
 const float TOKEN_CALM    = 0.0400; // MODE_TOKENS: drift speed at 0% context (near-still seed)
 const float TOKEN_RUSH    = 1.1000; // MODE_TOKENS: drift speed at 100% context (noticeably quicker, never frantic)
 
+// Focus tracking: when enabled (default), the hole is only rendered in the
+// focused Ghostty split. Non-focused splits skip the expensive geodesic
+// integration entirely, and you never see multiple holes in a split layout.
+// Set to 0 if your Ghostty version doesn't support the iFocus uniform or
+// if you want the hole visible in every split regardless of focus.
+#define FOCUS_TRACKING 1
+
 // geodesic integration steps per pixel (only pixels near the hole pay this).
 // The dominant GPU cost: at high token fill the near field covers most of the
 // screen, and on a base-M GPU at 5K that's ~15M pixels x N_STEPS per frame.
@@ -411,6 +418,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         fragColor = texture(iChannel0, uv);
         return;
     }
+#if FOCUS_TRACKING
+    // Only render the hole in the focused split. Non-focused splits skip the
+    // expensive geodesic integration entirely — no multiple holes in a split
+    // layout, and background panes consume no GPU time for lensing.
+    if (iFocus <= 0) {
+        fragColor = texture(iChannel0, uv);
+        return;
+    }
+#endif
     float rh = HOLE_RADIUS * sz;           // shadow radius in screen units
 
     // ---- gravitational time dilation (theme feature) ----
