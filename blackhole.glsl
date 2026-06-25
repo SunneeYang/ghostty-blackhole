@@ -336,22 +336,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // cycle start, back to small when the break window arrives
         I = mix(0.12, 1.0, grow);
         // typing detector: cursor quiet -> you're pausing; the hole shrinks live
-        // and is gone by the time the pause becomes a real break.
-        // When focus tracking is on, the timeout adapts to cursor behavior:
-        // a blinking cursor (normal shell) resets iTimeCursorChange every
-        // ~500ms — idle stays near zero, 90s timeout works normally. TUI
-        // apps (Claude Code) set a steady or hidden cursor that never
-        // changes — idle grows past 3s quickly. Detect this and switch to
-        // a 10-minute timeout so active TUI work doesn't false-fade.
+        // and is gone by the time the pause becomes a real break
         float idle = max(0.0, iTime - iTimeCursorChange);
-#if FOCUS_TRACKING
-        float fadeStart = (idle > 3.0) ? 600.0 : IDLE_FADE_SEC;  // 90s shell, 10min TUI
-        float fadeEnd   = max(BREAK_MIN * 60.0, fadeStart + 1.0);
-#else
-        float fadeStart = IDLE_FADE_SEC;
-        float fadeEnd   = max(BREAK_MIN * 60.0, IDLE_FADE_SEC + 1.0);
-#endif
-        I *= 1.0 - smoothstep(fadeStart, fadeEnd, idle);
+        I *= 1.0 - smoothstep(IDLE_FADE_SEC, max(BREAK_MIN * 60.0, IDLE_FADE_SEC + 1.0), idle);
         sz = mix(0.22, 1.0, I);              // starts small, grows toward break time
         // lazy Lissajous drift, vertically confined so the hole and its disk
         // stay above the work area at the bottom; bounds adapt to size (the
