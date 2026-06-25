@@ -26,6 +26,7 @@ Requires `SIZE_MODE MODE_TOKENS` in blackhole.glsl (the default).
 
 import json
 import os
+import subprocess
 import sys
 import time
 
@@ -46,14 +47,43 @@ SHRINK_RATE = 1.0 / (SHRINK_MIN * 60.0)   # 0.003333… / s
 
 
 # --------------------------------------------------------- OSC 12 : encode  -- (from claude-token.py)
+def session_tty():
+    """Walk up the ancestor chain and take the first real tty.
+    Claude Code spawns statusLine commands without a controlling terminal,
+    but the claude process itself sits on a Ghostty pty."""
+    pid = os.getppid()
+    for _ in range(10):
+        try:
+            out = subprocess.run(["ps", "-o", "ppid=,tty=", "-p", str(pid)],
+                                 capture_output=True, text=True, timeout=1).stdout.split()
+        except (OSError, subprocess.SubprocessError):
+            return None
+        if len(out) < 2:
+            return None
+        if out[1] != "??":
+            return "/dev/" + out[1]
+        if not out[0].isdigit() or int(out[0]) <= 1:
+            return None
+        pid = int(out[0])
+    return None
+
+
 def emit(seq):
-    """Write an escape sequence to this session's terminal (/dev/tty)."""
+    """Write an escape sequence to this session's terminal.  StatusLine hooks
+    have no /dev/tty, so fall back to walking the ancestor chain."""
     try:
         with open("/dev/tty", "wb") as tty:
             tty.write(seq)
         return
     except OSError:
         pass
+    path = session_tty()
+    if path:
+        try:
+            with open(path, "wb") as tty:
+                tty.write(seq)
+        except OSError:
+            pass
 
 
 def apply(level):
